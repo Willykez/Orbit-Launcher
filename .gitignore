@@ -1,0 +1,26 @@
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/app/build
+/app/src/main/jniLibs
+gradle-8.9*
+
+# Ignore log files
+*.log
+log.txt
+
+# Never commit build outputs / APKs / app bundles / baseline profiles
+*.apk
+*.aab
+*.dm
+/app/release/
+/apk/
+
+temp/
