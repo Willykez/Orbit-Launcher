@@ -522,6 +522,16 @@ public class SphereEngine implements ApplicationListener, AndroidWallpaperListen
      */
     private static final float LAUNCH_ANIM_DURATION = 0.22f;
 
+    // ─── Rotation persistence ("remember the home") ─────────────────────────
+    // Saved in pause(), restored in create() via loadSavedRotationOrIdentity().
+    // Deliberately NOT group-scoped and NOT in RELEVANT_KEYS: rotation is a
+    // pure viewing-angle preference, shared across groups, and must never
+    // trigger the live-config-change listener's scene rebuild.
+    private static final String PREF_ROTATION_X = "pref_sphere_rotation_x";
+    private static final String PREF_ROTATION_Y = "pref_sphere_rotation_y";
+    private static final String PREF_ROTATION_Z = "pref_sphere_rotation_z";
+    private static final String PREF_ROTATION_W = "pref_sphere_rotation_w";
+
     /**
      * Node index of the icon currently animating toward launch, or -1 when
      * no launch animation is in progress. Reset to -1 after the actual
@@ -884,7 +894,15 @@ public class SphereEngine implements ApplicationListener, AndroidWallpaperListen
         modelBatch = new ModelBatch();
 
         // ─── Initialize physics state ───────────────────────────────────
-        sphereRotation = new Quaternion().idt(); // Identity = no rotation
+        // Restore the last rotation the user left the sphere at (persisted in
+        // pause(), see saveRotationState()) rather than always resetting to
+        // identity. Within a single process this is usually a no-op — the
+        // Activity/wallpaper engine instance normally survives app launches
+        // — but it matters after the system kills the launcher's process
+        // under memory pressure while another app was foregrounded: without
+        // this, every such return to Home would silently snap the sphere
+        // back to its default orientation.
+        sphereRotation = loadSavedRotationOrIdentity();
         // angularVelocity is for fling momentum only; idle spin uses idleBlend
         angularVelocity = new Vector3(0f, 0f, 0f);
 
@@ -4003,7 +4021,45 @@ public class SphereEngine implements ApplicationListener, AndroidWallpaperListen
         // cycle (the paired finger-up events are dropped when the window loses focus).
         pinchActive = false;
         userInteracting = false;
+        saveRotationState();
         Log.d(TAG, "Paused");
+    }
+
+    /**
+     * Loads the sphere's last-saved rotation from SharedPreferences, or
+     * returns identity (no rotation) if nothing has been saved yet — e.g.
+     * first-ever launch, or a corrupt/zero-length quaternion from an
+     * interrupted write.
+     */
+    private Quaternion loadSavedRotationOrIdentity() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        float rx = prefs.getFloat(PREF_ROTATION_X, 0f);
+        float ry = prefs.getFloat(PREF_ROTATION_Y, 0f);
+        float rz = prefs.getFloat(PREF_ROTATION_Z, 0f);
+        float rw = prefs.getFloat(PREF_ROTATION_W, 1f);
+        Quaternion saved = new Quaternion(rx, ry, rz, rw);
+        if (saved.len2() < 0.0001f) {
+            return new Quaternion().idt();
+        }
+        saved.nor(); // guard against float drift from repeated persistence round-trips
+        return saved;
+    }
+
+    /**
+     * Persists the current sphere rotation so the next create() (e.g. after
+     * the launcher's process is killed by the system and later restarted)
+     * can restore it. Called from pause() rather than every frame — surviving
+     * a backgrounding is the goal, not durability against a hard crash
+     * mid-gesture.
+     */
+    private void saveRotationState() {
+        if (sphereRotation == null) return;
+        PreferenceManager.getDefaultSharedPreferences(context).edit()
+                .putFloat(PREF_ROTATION_X, sphereRotation.x)
+                .putFloat(PREF_ROTATION_Y, sphereRotation.y)
+                .putFloat(PREF_ROTATION_Z, sphereRotation.z)
+                .putFloat(PREF_ROTATION_W, sphereRotation.w)
+                .apply();
     }
 
     @Override
@@ -4018,6 +4074,10 @@ public class SphereEngine implements ApplicationListener, AndroidWallpaperListen
     @Override
     public void dispose() {
         Log.i(TAG, "Disposing SphereEngine...");
+
+        // Safety net: pause() normally saves rotation first, but guard
+        // against any teardown path that reaches dispose() without it.
+        saveRotationState();
 
         // ─── Unregister preference listener ────────────────────────────
         // Must be unregistered explicitly — SharedPreferences.WeakHashMap will
