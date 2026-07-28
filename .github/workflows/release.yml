@@ -5,6 +5,16 @@ on:
     branches:
       - main
 
+# If two commits land on main in quick succession, don't let their release
+# jobs run concurrently — both could pass the "tag doesn't exist yet" check
+# before either one actually pushes the tag, leading to a duplicate/racy
+# release attempt. Runs queue instead of overlapping; a newer push does NOT
+# cancel a release already in progress (cancel-in-progress: false), since an
+# in-flight signed-APK build/upload should never be killed mid-way.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -20,19 +30,54 @@ jobs:
       - name: Read version from build.gradle
         id: version
         run: |
+          set -euo pipefail
+
           VERSION_NAME=$(grep -oP '(?<=versionName ").*(?=")' app/build.gradle)
           VERSION_CODE=$(grep -oP '(?<=versionCode )\d+' app/build.gradle)
-          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
-          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_OUTPUT
-          echo "TAG=v$VERSION_NAME" >> $GITHUB_OUTPUT
+
+          # Fail fast with a clear message instead of silently proceeding
+          # with an empty/malformed value that would only surface much later
+          # as a confusing git-tag or release-upload error.
+          if [[ -z "$VERSION_NAME" ]]; then
+            echo "::error::Could not read versionName from app/build.gradle"
+            exit 1
+          fi
+          if [[ -z "$VERSION_CODE" ]]; then
+            echo "::error::Could not read versionCode from app/build.gradle"
+            exit 1
+          fi
+          if ! [[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::versionName '$VERSION_NAME' is not in X.Y.Z format"
+            exit 1
+          fi
+          if ! [[ "$VERSION_CODE" =~ ^[0-9]+$ ]]; then
+            echo "::error::versionCode '$VERSION_CODE' is not a plain integer"
+            exit 1
+          fi
+
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "TAG=v$VERSION_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Check if tag already exists
         id: tag_check
         run: |
-          if git rev-parse "v${{ steps.version.outputs.VERSION_NAME }}" >/dev/null 2>&1; then
-            echo "EXISTS=true" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          TAG="${{ steps.version.outputs.TAG }}"
+
+          # Query the remote directly rather than `git rev-parse` against the
+          # local checkout. rev-parse resolves ANY ref-ish (branches, short
+          # SHAs, etc.), so a same-named branch would false-positive as an
+          # "existing tag". `ls-remote --tags` with an explicit refs/tags/
+          # path only ever matches a real tag, and doesn't depend on the
+          # checkout action's local tag-fetching behavior.
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists on origin — skipping release."
+            echo "EXISTS=true" >> "$GITHUB_OUTPUT"
           else
-            echo "EXISTS=false" >> $GITHUB_OUTPUT
+            echo "Tag $TAG not found on origin — proceeding with release."
+            echo "EXISTS=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set up JDK 17
@@ -45,7 +90,23 @@ jobs:
 
       - name: Decode keystore
         if: steps.tag_check.outputs.EXISTS == 'false'
-        run: printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 --ignore-garbage -d > "$RUNNER_TEMP/keystore.jks"
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${{ secrets.KEYSTORE_BASE64 }}" ]]; then
+            echo "::error::KEYSTORE_BASE64 secret is empty or not set"
+            exit 1
+          fi
+
+          printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 --ignore-garbage -d > "$RUNNER_TEMP/keystore.jks"
+
+          # An empty/corrupt decode (e.g. the secret was truncated or not
+          # valid base64) would otherwise surface much later as an opaque
+          # Gradle signing failure. Catch it here instead.
+          if [[ ! -s "$RUNNER_TEMP/keystore.jks" ]]; then
+            echo "::error::Decoded keystore is empty — check the KEYSTORE_BASE64 secret"
+            exit 1
+          fi
 
       - name: Grant execute permission to gradlew
         if: steps.tag_check.outputs.EXISTS == 'false'
@@ -58,25 +119,48 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: |
+          set -euo pipefail
+          ./gradlew assembleRelease
+
+          APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          if [[ ! -f "$APK_PATH" ]]; then
+            echo "::error::Expected APK not found at $APK_PATH after assembleRelease"
+            exit 1
+          fi
 
       - name: Create git tag
         if: steps.tag_check.outputs.EXISTS == 'false'
         run: |
+          set -euo pipefail
+
+          TAG="${{ steps.version.outputs.TAG }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v${{ steps.version.outputs.VERSION_NAME }}"
-          git push origin "v${{ steps.version.outputs.VERSION_NAME }}"
+
+          # Re-check immediately before tagging/pushing — the concurrency
+          # group above prevents overlapping runs of THIS workflow, but this
+          # stays cheap insurance against a tag having appeared some other
+          # way (e.g. pushed manually) between the earlier check and now.
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG appeared on origin since the earlier check — aborting to avoid a duplicate/conflicting release"
+            exit 1
+          fi
+
+          git tag "$TAG"
+          git push origin "$TAG"
 
       - name: Rename APK to match F-Droid Binaries URL pattern
         if: steps.tag_check.outputs.EXISTS == 'false'
-        run: cp app/build/outputs/apk/release/app-release.apk AuraOrbit-${{ steps.version.outputs.VERSION_NAME }}.apk
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/release/app-release.apk "AuraOrbit-${{ steps.version.outputs.VERSION_NAME }}.apk"
 
       - name: Create GitHub Release and upload APK
         if: steps.tag_check.outputs.EXISTS == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v${{ steps.version.outputs.VERSION_NAME }}"
+          tag_name: "${{ steps.version.outputs.TAG }}"
           files: AuraOrbit-${{ steps.version.outputs.VERSION_NAME }}.apk
           fail_on_unmatched_files: true
 
