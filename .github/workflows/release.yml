@@ -5,12 +5,11 @@ on:
     branches:
       - main
 
-# If two commits land on main in quick succession, don't let their release
-# jobs run concurrently — both could pass the "tag doesn't exist yet" check
-# before either one actually pushes the tag, leading to a duplicate/racy
-# release attempt. Runs queue instead of overlapping; a newer push does NOT
-# cancel a release already in progress (cancel-in-progress: false), since an
-# in-flight signed-APK build/upload should never be killed mid-way.
+# Queue overlapping runs instead of letting them race each other (two pushes
+# in quick succession both force-moving the same tag / uploading to the same
+# release at once would be a mess). A newer push does NOT cancel a release
+# already in progress — an in-flight signed-APK build/upload should never be
+# killed mid-way.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -59,29 +58,7 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "TAG=v$VERSION_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Check if tag already exists
-        id: tag_check
-        run: |
-          set -euo pipefail
-
-          TAG="${{ steps.version.outputs.TAG }}"
-
-          # Query the remote directly rather than `git rev-parse` against the
-          # local checkout. rev-parse resolves ANY ref-ish (branches, short
-          # SHAs, etc.), so a same-named branch would false-positive as an
-          # "existing tag". `ls-remote --tags` with an explicit refs/tags/
-          # path only ever matches a real tag, and doesn't depend on the
-          # checkout action's local tag-fetching behavior.
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists on origin — skipping release."
-            echo "EXISTS=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Tag $TAG not found on origin — proceeding with release."
-            echo "EXISTS=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Set up JDK 17
-        if: steps.tag_check.outputs.EXISTS == 'false'
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -89,7 +66,6 @@ jobs:
           cache: gradle
 
       - name: Decode keystore
-        if: steps.tag_check.outputs.EXISTS == 'false'
         run: |
           set -euo pipefail
 
@@ -109,11 +85,9 @@ jobs:
           fi
 
       - name: Grant execute permission to gradlew
-        if: steps.tag_check.outputs.EXISTS == 'false'
         run: chmod +x gradlew
 
       - name: Build signed release APK
-        if: steps.tag_check.outputs.EXISTS == 'false'
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/keystore.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -129,8 +103,7 @@ jobs:
             exit 1
           fi
 
-      - name: Create git tag
-        if: steps.tag_check.outputs.EXISTS == 'false'
+      - name: Create or move git tag
         run: |
           set -euo pipefail
 
@@ -138,26 +111,27 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Re-check immediately before tagging/pushing — the concurrency
-          # group above prevents overlapping runs of THIS workflow, but this
-          # stays cheap insurance against a tag having appeared some other
-          # way (e.g. pushed manually) between the earlier check and now.
+          # Always release on every push. If versionName in build.gradle
+          # wasn't bumped since the last push, TAG already exists — rather
+          # than skip, force-move it to this commit so the tag (and the
+          # GitHub Release created below, which softprops/action-gh-release
+          # updates in place for an existing tag) always reflect the latest
+          # build for that version.
           if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "::error::Tag $TAG appeared on origin since the earlier check — aborting to avoid a duplicate/conflicting release"
-            exit 1
+            echo "Tag $TAG already exists on origin — moving it to this commit."
+          else
+            echo "Tag $TAG is new."
           fi
 
-          git tag "$TAG"
-          git push origin "$TAG"
+          git tag -f "$TAG"
+          git push origin "$TAG" --force
 
       - name: Rename APK to match F-Droid Binaries URL pattern
-        if: steps.tag_check.outputs.EXISTS == 'false'
         run: |
           set -euo pipefail
           cp app/build/outputs/apk/release/app-release.apk "AuraOrbit-${{ steps.version.outputs.VERSION_NAME }}.apk"
 
       - name: Create GitHub Release and upload APK
-        if: steps.tag_check.outputs.EXISTS == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "${{ steps.version.outputs.TAG }}"
