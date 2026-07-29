@@ -135,7 +135,7 @@ fun LauncherSettingsScreen(
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp, top = 8.dp, bottom = 4.dp)
+                modifier = Modifier.padding(start = 20.dp, top = 8.dp, end = 20.dp, bottom = 4.dp)
             )
 
             // ─── Sphere appearance (delegates to the existing rich settings) ──
@@ -164,7 +164,7 @@ fun LauncherSettingsScreen(
                 text = "Dock Apps  ·  ${dockPackages.size}/$DOCK_MAX_APPS  ·  recommended $DOCK_RECOMMENDED_MIN_APPS–$DOCK_MAX_APPS",
                 color = Color.White.copy(alpha = 0.7f),
                 fontSize = 13.sp,
-                modifier = Modifier.padding(horizontal = 20.dp, top = 16.dp, bottom = 8.dp)
+                modifier = Modifier.padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 8.dp)
             )
 
             LazyVerticalGrid(
