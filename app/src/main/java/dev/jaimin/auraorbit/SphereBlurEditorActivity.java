@@ -127,7 +127,7 @@ public class SphereBlurEditorActivity extends com.badlogic.gdx.backends.android.
             ));
         }
 
-        setupControlDialog(radiusPref, strengthPref);
+        setupControlDialog("pref_blur_radius", "pref_blur_strength");
         updateBlurPreview();
     }
 

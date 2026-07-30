@@ -31,7 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -156,7 +156,7 @@ fun LauncherSettingsScreen(
                 )
             }
 
-            Divider(color = Color.White.copy(alpha = 0.15f))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.15f))
 
             // ─── Dock apps ─────────────────────────────────────────────────
             Text(
