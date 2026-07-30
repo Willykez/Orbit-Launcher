@@ -53,8 +53,8 @@ import java.util.Set;
  *    SecurityException on Android 13+ when AuraOrbit itself was the active
  *    wallpaper.
  *
- * 3. **Group Configuration Parsing**: Delegates to WidgetStore to map package
- *    names to group IDs/colors for the SphereEngine's visual clustering system.
+ * 3. **App Discovery**: Queries PackageManager for all launchable apps when
+ *    the user hasn't made an explicit selection, as a sensible default.
  *
  * ─── Thread Safety ──────────────────────────────────────────────────────────
  *
@@ -139,39 +139,19 @@ public class AppFetcher {
      *
      * MUST be called from the GL thread (e.g., inside SphereEngine.create()).
      *
-     * ─── Group Assignment ────────────────────────────────────────────────────
-     *
-     * Group data is read via {@link WidgetStore#load(SharedPreferences)} and then
-     * inverted into a package→Group map by {@link WidgetStore#packageToWidget(List)}.
-     * This replaces the old per-key schema (groups_list / group_*_color / group_*_apps)
-     * which required N+1 pref reads and two Map allocations; the new approach uses
-     * a single JSON read and a single pass over the group list.
-     *
      * @param context  Android context for PackageManager access
-     * @return List of AppNode objects ready for sphere placement, sorted by group
+     * @return List of AppNode objects ready for sphere placement
      */
-    public static List<AppNode> fetchSelectedApps(Context context, String pinnedGroupName) {
+    public static List<AppNode> fetchSelectedApps(Context context) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         PackageManager pm = context.getPackageManager();
 
         // ─── Read selected package names ────────────────────────────────
         Set<String> selectedPackages = new HashSet<>();
 
-        if (pinnedGroupName != null) {
-            // Load apps selected for this specific widget
-            List<WidgetStore.Widget> widgets = WidgetStore.load(prefs);
-            WidgetStore.Widget w = WidgetStore.find(widgets, pinnedGroupName);
-            if (w != null && w.packages != null && !w.packages.isEmpty()) {
-                selectedPackages.addAll(w.packages);
-            }
-        }
-
-        if (selectedPackages.isEmpty()) {
-            // Load apps selected for the permanent sphere
-            Set<String> permApps = prefs.getStringSet(PREF_SELECTED_APPS, new HashSet<>());
-            if (permApps != null && !permApps.isEmpty()) {
-                selectedPackages.addAll(permApps);
-            }
+        Set<String> permApps = prefs.getStringSet(PREF_SELECTED_APPS, new HashSet<>());
+        if (permApps != null && !permApps.isEmpty()) {
+            selectedPackages.addAll(permApps);
         }
 
         if (selectedPackages.isEmpty()) {
@@ -185,13 +165,6 @@ public class AppFetcher {
         }
 
         Log.i(TAG, "Fetching " + selectedPackages.size() + " selected apps");
-
-        // ─── Read group assignments via WidgetStore ───────────────────────
-        // WidgetStore.load() handles both the new JSON schema and legacy key
-        // migration transparently. packageToWidget() inverts the list into a
-        // fast O(1) lookup map keyed by package name.
-        Map<String, WidgetStore.Widget> packageToWidget =
-                WidgetStore.packageToWidget(WidgetStore.load(prefs));
 
         // ─── Build AppNode list ─────────────────────────────────────────
         List<AppNode> nodes = new ArrayList<>();
@@ -227,16 +200,8 @@ public class AppFetcher {
                     // Do NOT recycle the bitmap here anymore! It is cached.
                 }
 
-                // ─── Assign group metadata via WidgetStore ────────────────
-                WidgetStore.Widget g = packageToWidget.get(packageName);
-                if (g != null) {
-                    node.groupId = g.name;
-                    node.groupColorHex = g.color;
-                }
-
                 nodes.add(node);
-                Log.d(TAG, "Loaded: " + appName + " (" + packageName + ")"
-                        + (node.groupId != null ? " [Group: " + node.groupId + "]" : ""));
+                Log.d(TAG, "Loaded: " + appName + " (" + packageName + ")");
 
             } catch (PackageManager.NameNotFoundException e) {
                 // App was uninstalled since selection — skip silently

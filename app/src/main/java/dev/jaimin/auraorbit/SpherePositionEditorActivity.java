@@ -53,11 +53,10 @@ public class SpherePositionEditorActivity extends AndroidApplication {
         screenWidth = metrics.widthPixels;
         screenHeight = metrics.heightPixels;
 
-        String groupName = getIntent().getStringExtra("group_name");
-        scalePref = groupName != null ? "pref_sphere_scale_" + groupName : "pref_sphere_scale";
-        xPref = groupName != null ? "pref_sphere_x_" + groupName : "pref_sphere_x";
-        yPref = groupName != null ? "pref_sphere_y_" + groupName : "pref_sphere_y";
-        posPref = groupName != null ? "pref_sphere_position_" + groupName : "pref_sphere_position";
+        scalePref = "pref_sphere_scale";
+        xPref = "pref_sphere_x";
+        yPref = "pref_sphere_y";
+        posPref = "pref_sphere_position";
 
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
         currentScale = prefs.getFloat(scalePref, 1.0f);
@@ -91,7 +90,7 @@ public class SpherePositionEditorActivity extends AndroidApplication {
         config.b = 8;
         config.a = 8;
 
-        sphereEngine = new SphereEngine(this, true, groupName);
+        sphereEngine = new SphereEngine(this, true);
         java.util.ArrayList<String> tempPackages = getIntent().getStringArrayListExtra("temp_packages");
         if (tempPackages != null) {
             sphereEngine.setTempPackages(tempPackages);

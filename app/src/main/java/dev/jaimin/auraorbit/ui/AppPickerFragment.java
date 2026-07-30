@@ -28,13 +28,11 @@ import com.google.android.material.textfield.TextInputEditText;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import dev.jaimin.auraorbit.AppFetcher;
-import dev.jaimin.auraorbit.WidgetStore;
 import dev.jaimin.auraorbit.R;
 
 /**
@@ -124,7 +122,6 @@ public class AppPickerFragment extends Fragment {
         // Wire up the Save button at the bottom.
         root.findViewById(R.id.btn_save).setOnClickListener(v -> {
             prefs.edit().putStringSet(AppFetcher.PREF_SELECTED_APPS, new HashSet<>(localSelectedApps)).apply();
-            dev.jaimin.auraorbit.SphereWidgetProvider.updateAllWidgets(requireContext());
             android.widget.Toast.makeText(requireContext(), "Saved!", android.widget.Toast.LENGTH_SHORT).show();
             getParentFragmentManager().popBackStack();
         });
@@ -161,9 +158,6 @@ public class AppPickerFragment extends Fragment {
             List<ResolveInfo> resolvedApps = AppFetcher.getAllLaunchableApps(appCtx);
             dev.jaimin.auraorbit.IconPackManager iconPackManager = dev.jaimin.auraorbit.IconPackManager.getInstance(appCtx);
 
-            List<WidgetStore.Widget> widgets = WidgetStore.load(prefs);
-            Map<String, WidgetStore.Widget> pkgToWidget = WidgetStore.packageToWidget(widgets);
-
             List<AppRow> rows = new ArrayList<>(resolvedApps.size());
             for (ResolveInfo ri : resolvedApps) {
                 String pkg = ri.activityInfo.packageName;
@@ -176,11 +170,7 @@ public class AppPickerFragment extends Fragment {
                     icon = ri.loadIcon(pm);
                 }
 
-                WidgetStore.Widget owningWidget = pkgToWidget.get(pkg);
-                String widgetName = owningWidget != null ? owningWidget.name : null;
-
-                AppRow row = new AppRow(pkg, label, icon, widgetName,
-                        localSelectedApps.contains(pkg));
+                AppRow row = new AppRow(pkg, label, icon, localSelectedApps.contains(pkg));
                 rows.add(row);
             }
 
@@ -234,15 +224,12 @@ public class AppPickerFragment extends Fragment {
         final String packageName;
         final String label;
         final Drawable icon;
-        @Nullable final String widgetName;
         boolean checked;
 
-        AppRow(String packageName, String label, Drawable icon,
-               @Nullable String widgetName, boolean checked) {
+        AppRow(String packageName, String label, Drawable icon, boolean checked) {
             this.packageName = packageName;
             this.label       = label;
             this.icon        = icon;
-            this.widgetName   = widgetName;
             this.checked     = checked;
         }
     }
@@ -297,13 +284,6 @@ public class AppPickerFragment extends Fragment {
             holder.icon.setImageDrawable(row.icon);
             holder.label.setText(row.label);
 
-            if (row.widgetName != null) {
-                holder.widgetBadge.setText(row.widgetName);
-                holder.widgetBadge.setVisibility(View.VISIBLE);
-            } else {
-                holder.widgetBadge.setVisibility(View.GONE);
-            }
-
             holder.check.setOnCheckedChangeListener(null);
             holder.check.setChecked(row.checked);
 
@@ -329,14 +309,12 @@ public class AppPickerFragment extends Fragment {
         final class VH extends RecyclerView.ViewHolder {
             final ImageView icon;
             final TextView  label;
-            final TextView  widgetBadge;
             final CheckBox  check;
 
             VH(@NonNull View itemView) {
                 super(itemView);
                 icon       = itemView.findViewById(R.id.app_icon);
                 label      = itemView.findViewById(R.id.app_label);
-                widgetBadge = itemView.findViewById(R.id.app_widget_badge);
                 check      = itemView.findViewById(R.id.app_check);
             }
         }

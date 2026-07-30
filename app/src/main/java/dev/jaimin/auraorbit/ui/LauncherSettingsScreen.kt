@@ -65,10 +65,9 @@ import dev.jaimin.auraorbit.LiveWallpaperSettings
  *      deliberately NOT reimplemented here, to avoid a second, divergent copy
  *      of settings that already work well.
  *
- * This screen does not touch widget prefs, group-scoped keys, or anything in
- * SphereWidgetProvider — the Dock is a standalone Home-screen concept (see
- * DockPrefs.kt's header comment) so nothing here can reintroduce a
- * widget-related bug into the pure-launcher experience.
+ * The app no longer has a widget system at all (see the removal note in
+ * DockPrefs.kt's header) — this screen, the Dock, and the single sphere are
+ * the entire pure-launcher surface now.
  */
 @Composable
 fun LauncherSettingsScreen(

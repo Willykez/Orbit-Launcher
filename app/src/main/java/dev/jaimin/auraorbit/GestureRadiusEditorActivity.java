@@ -97,8 +97,7 @@ public class GestureRadiusEditorActivity extends AndroidApplication {
         config.b = 8;
         config.a = 8;
 
-        String groupName = getIntent().getStringExtra("group_name");
-        sphereEngine = new SphereEngine(this, true, groupName);
+        sphereEngine = new SphereEngine(this, true);
         sphereEngine.applyPositionAndScale = true; // Tell engine to translate camera like wallpaper mode
         sphereEngine.setPreviewModeAuthoritative(true); // Ensure app decals are loaded and rendered immediately
         

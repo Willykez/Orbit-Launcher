@@ -13,10 +13,6 @@
     <string name="pref_select_apps_title">Select Apps</string>
     <string name="pref_select_apps_summary">Choose which apps appear on the 3D sphere</string>
 
-    <!-- Groups -->
-    <string name="pref_category_widgets">Widget Sphere</string>
-    <string name="pref_manage_widgets_title">Manage Widgets</string>
-    <string name="pref_manage_widgets_summary">Create colored folders to cluster apps on the widget sphere</string>
 
     <!-- Background -->
     <string name="pref_category_background">Background</string>
@@ -54,20 +50,13 @@
     <string name="dialog_gesture_tips_title">Spinning the sphere</string>
     <string name="dialog_gesture_tips_message">Two-finger drag — use two fingers to spin the sphere. The launcher ignores multi-finger touches, so this is the conflict-free way to rotate.\n\nOne-finger drag — Android gives the launcher first claim on single-finger swipes, so the launcher always reacts too (page switching, app drawer, notification panel). No app can override this.\n\nLast home page trick — place the sphere on your last home screen page. Swiping right-to-left there has no further page to switch to, so the sphere gets the gesture.\n\nOne UI tip — go to Home screen settings and turn off \"Swipe down for notification panel\" to stop the panel appearing while you spin. For deeper control, Good Lock → Home Up lets you remap home screen gestures.</string>
     <string name="dialog_gesture_tips_ok">Got it</string>
-    <string name="dialog_widget_name_hint">Widget name (e.g., Social)</string>
-    <string name="dialog_delete_confirm">Delete widget &#8220;%1$s&#8221;?</string>
-    <string name="dialog_delete_confirm_msg">Are you sure you want to delete this widget?</string>
 
     <!-- Buttons -->
     <string name="btn_save">Save</string>
     <string name="btn_cancel">Cancel</string>
-    <string name="btn_delete_widget">Delete</string>
 
     <!-- Toasts -->
     <string name="toast_saved">Settings saved. Wallpaper will update.</string>
-    <string name="toast_widget_name_empty">Please enter a widget name.</string>
-    <string name="toast_widget_exists">A widget with this name already exists.</string>
-    <string name="toast_widget_deleted">Widget deleted.</string>
 
     <!-- Background toasts -->
     <string name="toast_background_saved">Background image saved.</string>
@@ -79,8 +68,6 @@
     <!-- Summaries -->
     <string name="summary_apps_selected">%1$d apps selected</string>
     <string name="summary_no_apps">No apps selected — tap to choose</string>
-    <string name="summary_widgets_count">%1$d widgets configured</string>
-    <string name="summary_no_widgets">No widgets — tap to create</string>
 
     <!-- Fragment / UI titles -->
     <string name="search_apps_hint">Search apps…</string>
@@ -90,12 +77,6 @@
     <string name="drawer_action_add_to_sphere">Add to Sphere</string>
     <string name="drawer_action_remove_from_sphere">Remove from Sphere</string>
     <string name="drawer_uninstall_system_app_blocked">This is a system app and can\'t be uninstalled</string>
-    <string name="title_widgets">Widgets</string>
-    <string name="title_new_widget">New Widget</string>
-    <string name="title_edit_widget">Edit Widget</string>
-    <string name="fab_new_widget">New Widget</string>
-    <string name="empty_widgets">No widgets yet.\nTap + to create one.</string>
-    <string name="member_in_other_group">Already in %1$s</string>
     <string name="group_member_count">%1$d apps</string>
     <string name="wallpaper_hint_no_apps">Open AuraOrbit settings\nto pick your apps</string>
 

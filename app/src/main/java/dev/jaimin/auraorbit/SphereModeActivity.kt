@@ -192,13 +192,10 @@ class SphereModeActivity :
             a = 8
         }
 
-        // Read group_name / widget_name extra if opened from a pinned widget
-        val groupName = intent.getStringExtra("group_name") ?: intent.getStringExtra("widget_name")
-
         // Initialize libGDX with activityMode=true so the engine bypasses all
         // wallpaper-specific guards (page isolation, edge exclusion, zoom revert,
         // command gating).
-        val engine = SphereEngine(this, true, groupName)
+        val engine = SphereEngine(this, true)
         engine.applyPositionAndScale = true
         sphereEngine = engine
 
@@ -210,13 +207,10 @@ class SphereModeActivity :
             gfxView.setZOrderOnTop(true)
         }
 
-        val radiusPref = if (groupName != null) "pref_blur_radius_$groupName" else "pref_blur_radius"
-        val strengthPref = if (groupName != null) "pref_blur_strength_$groupName" else "pref_blur_strength"
-
-        var blurRadiusPref = prefs.getInt(radiusPref, 10)
-        var blurStrengthPref = prefs.getInt(strengthPref, 50)
+        var blurRadiusPref = prefs.getInt("pref_blur_radius", 10)
+        var blurStrengthPref = prefs.getInt("pref_blur_strength", 50)
         // Migrate old pref_blur_amount if the new ones don't exist
-        if (!prefs.contains(radiusPref) && groupName == null && prefs.contains("pref_blur_amount")) {
+        if (!prefs.contains("pref_blur_radius") && prefs.contains("pref_blur_amount")) {
             val oldAmount = prefs.getInt("pref_blur_amount", 0)
             blurRadiusPref = oldAmount
             blurStrengthPref = if (oldAmount > 0) 50 else 0
@@ -346,11 +340,6 @@ class SphereModeActivity :
             closeOverlay()
             setupDockIfHome()
         }
-
-        // If the activity was already running and another widget was clicked,
-        // update the engine with the new group name!
-        val groupName = newIntent.getStringExtra("group_name") ?: newIntent.getStringExtra("widget_name")
-        sphereEngine?.setPinnedGroupName(groupName)
     }
 
     override fun onStart() {
@@ -362,10 +351,6 @@ class SphereModeActivity :
         super.onResume()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
 
-        val hideIntent = Intent(this, SphereWidgetProvider::class.java)
-        hideIntent.action = "dev.jaimin.auraorbit.WIDGET_HIDE"
-        sendBroadcast(hideIntent)
-
         // Always hide system bars on resume to ensure the activity stays immersive
         // if the user pulled down the notification shade.
         hideSystemBars()
@@ -374,9 +359,6 @@ class SphereModeActivity :
     override fun onPause() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
         super.onPause()
-        val showIntent = Intent(this, SphereWidgetProvider::class.java)
-        showIntent.action = "dev.jaimin.auraorbit.WIDGET_SHOW"
-        sendBroadcast(showIntent)
     }
 
     override fun onStop() {

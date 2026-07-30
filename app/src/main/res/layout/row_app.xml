@@ -31,14 +31,6 @@
                 android:singleLine="true"
                 android:ellipsize="end" />
 
-            <TextView
-                android:id="@+id/app_widget_badge"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:textColor="?android:attr/textColorSecondary"
-                android:visibility="gone" />
-
     </LinearLayout>
 
     <com.google.android.material.checkbox.MaterialCheckBox

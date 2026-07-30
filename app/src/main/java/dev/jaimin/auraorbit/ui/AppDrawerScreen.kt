@@ -68,7 +68,6 @@ import androidx.preference.PreferenceManager
 import dev.jaimin.auraorbit.AppFetcher
 import dev.jaimin.auraorbit.IconPackManager
 import dev.jaimin.auraorbit.R
-import dev.jaimin.auraorbit.SphereWidgetProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -384,7 +383,6 @@ private fun toggleSphereMembership(context: Context, packageName: String, addToS
     }
     if (addToSphere) updated.add(packageName) else updated.remove(packageName)
     prefs.edit().putStringSet(AppFetcher.PREF_SELECTED_APPS, updated).apply()
-    SphereWidgetProvider.updateAllWidgets(context)
     Toast.makeText(
         context,
         if (addToSphere) R.string.drawer_action_add_to_sphere else R.string.drawer_action_remove_from_sphere,

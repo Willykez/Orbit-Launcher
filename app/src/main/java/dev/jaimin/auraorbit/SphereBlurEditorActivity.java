@@ -54,26 +54,18 @@ public class SphereBlurEditorActivity extends com.badlogic.gdx.backends.android.
         screenWidth = metrics.widthPixels;
         screenHeight = metrics.heightPixels;
 
-        String groupName = getIntent().getStringExtra("group_name");
-        String scalePref = groupName != null ? "pref_sphere_scale_" + groupName : "pref_sphere_scale";
-        String radiusPref = groupName != null ? "pref_blur_radius_" + groupName : "pref_blur_radius";
-        String strengthPref = groupName != null ? "pref_blur_strength_" + groupName : "pref_blur_strength";
-        String posPref = groupName != null ? "pref_sphere_position_" + groupName : "pref_sphere_position";
-        String xPref = groupName != null ? "pref_sphere_x_" + groupName : "pref_sphere_x";
-        String yPref = groupName != null ? "pref_sphere_y_" + groupName : "pref_sphere_y";
-
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        currentScale = prefs.getFloat(scalePref, 1.0f);
+        currentScale = prefs.getFloat("pref_sphere_scale", 1.0f);
         currentBlurRadius = 20; // Forced to maximum (full screen)
-        currentBlurStrength = prefs.getInt(strengthPref, 50);
+        currentBlurStrength = prefs.getInt("pref_blur_strength", 50);
 
         // Calculate the exact 3D visual sphere center coordinates
-        String posType = prefs.getString(posPref, "center");
+        String posType = prefs.getString("pref_sphere_position", "center");
         if ("custom".equals(posType)) {
             float defaultX = (screenWidth - (screenWidth * currentScale)) / 2f;
             float defaultY = (screenHeight - (screenWidth * currentScale)) / 2f;
-            float sphereX = prefs.getFloat(xPref, defaultX);
-            float sphereY = prefs.getFloat(yPref, defaultY);
+            float sphereX = prefs.getFloat("pref_sphere_x", defaultX);
+            float sphereY = prefs.getFloat("pref_sphere_y", defaultY);
             sphereCenterX = sphereX + (screenWidth * currentScale) / 2f;
             sphereCenterY = sphereY + (screenWidth * currentScale) / 2f;
         } else if ("top".equals(posType)) {
@@ -93,9 +85,6 @@ public class SphereBlurEditorActivity extends com.badlogic.gdx.backends.android.
         // We project worldRadius through that same view frustum to get screen pixels.
         int sphereRadiusPref = prefs.getInt("pref_sphere_radius", 50);
         int iconPref = prefs.getInt("pref_icon_size", 50);
-        if (groupName != null) {
-            iconPref = prefs.getInt("pref_icon_size_" + groupName, iconPref);
-        }
         float worldRadius = 3.0f + 5.0f * (sphereRadiusPref / 100f);
         float worldIconSize = 0.6f + 1.4f * (iconPref / 100f);
         float effRadius = worldRadius + worldIconSize * 0.75f;
@@ -115,7 +104,7 @@ public class SphereBlurEditorActivity extends com.badlogic.gdx.backends.android.
         config.b = 8;
         config.a = 8;
 
-        sphereEngine = new SphereEngine(this, true, groupName);
+        sphereEngine = new SphereEngine(this, true);
         sphereEngine.applyPositionAndScale = true;
         sphereEngine.setPreviewModeAuthoritative(true);
 

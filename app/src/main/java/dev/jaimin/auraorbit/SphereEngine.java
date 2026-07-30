@@ -771,7 +771,6 @@ public class SphereEngine implements ApplicationListener, AndroidWallpaperListen
      */
     private static final Set<String> RELEVANT_KEYS = Set.of(
             "selected_app_packages",
-            WidgetStore.PREF_WIDGETS_JSON,
             "pref_show_background",
             BackgroundStore.PREF_BACKGROUND_VERSION,
             "pref_sphere_radius",
@@ -807,10 +806,15 @@ public class SphereEngine implements ApplicationListener, AndroidWallpaperListen
     private String lastConfigSnapshot = "";
 
     /**
-     * If non-null, this engine instance is running inside a pinned widget,
-     * and should only render apps belonging to this specific group.
+     * Always null now — the app is a single-sphere launcher with no more
+     * per-widget-instance grouping. Kept as a field (rather than deleting it
+     * outright) because dozens of pref-key computations throughout this file
+     * are written as {@code pinnedGroupName != null ? "..._" + pinnedGroupName
+     * : "..."}; with this permanently null, every one of those correctly and
+     * automatically collapses to the single global/base pref key, without
+     * needing to touch each call site individually.
      */
-    private String pinnedGroupName = null;
+    private final String pinnedGroupName = null;
     private java.util.List<String> tempPackages = null;
 
     public void setTempPackages(java.util.List<String> tempPackages) {
@@ -828,7 +832,7 @@ public class SphereEngine implements ApplicationListener, AndroidWallpaperListen
      *                extends Context, so the service itself IS a Context.
      */
     public SphereEngine(Context context) {
-        this(context, false, null);
+        this(context, false);
     }
 
     /**
@@ -837,27 +841,12 @@ public class SphereEngine implements ApplicationListener, AndroidWallpaperListen
      * @param context      The Android context ({@link SphereModeActivity}).
      * @param activityMode {@code true} when running inside a fullscreen activity
      *                     that owns all input exclusively.
-     * @param pinnedGroupName The name of the group to display exclusively, or null for all apps.
      */
-    public SphereEngine(Context context, boolean activityMode, String pinnedGroupName) {
+    public SphereEngine(Context context, boolean activityMode) {
         this.context = context;
         this.activityMode = activityMode;
-        this.pinnedGroupName = pinnedGroupName;
         if (activityMode) {
             this.pageVisibility = 0f;
-        }
-    }
-
-    /**
-     * Updates the pinned group name dynamically (used when SphereModeActivity receives onNewIntent).
-     */
-    public void setPinnedGroupName(String newGroupName) {
-        if ((this.pinnedGroupName == null && newGroupName != null) || 
-            (this.pinnedGroupName != null && !this.pinnedGroupName.equals(newGroupName))) {
-            this.pinnedGroupName = newGroupName;
-            // Force a rebuild to apply the new group filtering
-            lastConfigSnapshot = ""; 
-            applyConfig();
         }
     }
 
@@ -1025,7 +1014,6 @@ public class SphereEngine implements ApplicationListener, AndroidWallpaperListen
         Set<String> selectedApps = prefs.getStringSet("selected_app_packages", new java.util.HashSet<>());
         sb.append(new TreeSet<>(selectedApps)).append('|');
 
-        sb.append(prefs.getString(WidgetStore.PREF_WIDGETS_JSON, "")).append('|');
         sb.append(prefs.getBoolean("pref_show_background", true)).append('|');
         sb.append(prefs.getInt(BackgroundStore.PREF_BACKGROUND_VERSION, 0)).append('|');
         sb.append(prefs.getInt("pref_sphere_radius", 50)).append('|');
@@ -1078,7 +1066,9 @@ public class SphereEngine implements ApplicationListener, AndroidWallpaperListen
      * ─── What is rebuilt ─────────────────────────────────────────────────
      *
      * - All app icon textures (disposed then re-fetched from PackageManager)
-     * - Group backdrop 3D models (disposed then rebuilt from new WidgetStore data)
+     * - Group backdrop 3D models (always empty now — groupId is never assigned
+     *   since the widget/cluster system was removed; kept only so this method
+     *   doesn't need to be touched if grouping is ever reintroduced)
      * - Background texture (disposed then reloaded from BackgroundStore)
      * - Uniform Fibonacci node distribution (recalculated with new effectiveRadius)
      * - Decals (recreated with new iconSize)
@@ -1267,7 +1257,7 @@ public class SphereEngine implements ApplicationListener, AndroidWallpaperListen
         if (tempPackages != null && !tempPackages.isEmpty()) {
             appNodes = AppFetcher.fetchAppsByPackages(context, tempPackages);
         } else {
-            appNodes = AppFetcher.fetchSelectedApps(context, pinnedGroupName);
+            appNodes = AppFetcher.fetchSelectedApps(context);
         }
         
         if (appNodes.isEmpty()) {

@@ -133,9 +133,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
-            </intent-filter>
         </activity>
 
         <activity
@@ -143,34 +140,10 @@
             android:exported="false"
             android:theme="@style/Theme.AuraOrbit.TransparentFullscreen" />
 
-        <!-- ═══════════════════════════════════════════════════════════════
-             4. WIDGET PROVIDER (Transparent Popup Architecture)
-             ═══════════════════════════════════════════════════════════════ -->
-        <receiver
-            android:name=".SphereWidgetProvider"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/sphere_widget_info" />
-        </receiver>
-
-        <receiver
-            android:name=".WidgetPinnedReceiver"
-            android:exported="false" />
-
-
         <activity
             android:name=".SphereBlurEditorActivity"
             android:theme="@style/Theme.AuraOrbit.TransparentFullscreen"
             android:screenOrientation="portrait"
-            android:exported="false" />
-
-        <activity
-            android:name=".DeletedWidgetActivity"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:exported="false" />
 
         <activity

@@ -17,7 +17,6 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import dev.jaimin.auraorbit.AppFetcher;
-import dev.jaimin.auraorbit.SphereWidgetProvider;
 import dev.jaimin.auraorbit.R;
 
 public class DashboardFragment extends Fragment {
@@ -69,9 +68,6 @@ public class DashboardFragment extends Fragment {
         // Navigation Cards
         MaterialCardView cardPermanentSphere = view.findViewById(R.id.card_permanent_sphere);
         cardPermanentSphere.setOnClickListener(v -> navigateTo(new PermanentSphereFragment()));
-
-        MaterialCardView cardWidgetSphere = view.findViewById(R.id.card_widget_sphere);
-        cardWidgetSphere.setOnClickListener(v -> navigateTo(new WidgetListFragment()));
 
         // Icon Pack
         iconPackManager = dev.jaimin.auraorbit.IconPackManager.getInstance(requireContext());
@@ -161,10 +157,7 @@ public class DashboardFragment extends Fragment {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-                    
-                    // Update all widgets to reflect the new icon pack
-                    SphereWidgetProvider.updateAllWidgets(requireContext());
-                    
+
                     dialog.dismiss();
                 })
                 .setNegativeButton("Cancel", null)
