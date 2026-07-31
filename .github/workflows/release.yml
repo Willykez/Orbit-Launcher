@@ -103,6 +103,18 @@ jobs:
             exit 1
           fi
 
+      - name: Rename APK to match F-Droid Binaries URL pattern
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/release/app-release.apk "AuraOrbit-${{ steps.version.outputs.VERSION_NAME }}.apk"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuraOrbit-${{ steps.version.outputs.VERSION_NAME }}
+          path: AuraOrbit-${{ steps.version.outputs.VERSION_NAME }}.apk
+          if-no-files-found: error
+
       - name: Create or move git tag
         run: |
           set -euo pipefail
@@ -125,11 +137,6 @@ jobs:
 
           git tag -f "$TAG"
           git push origin "$TAG" --force
-
-      - name: Rename APK to match F-Droid Binaries URL pattern
-        run: |
-          set -euo pipefail
-          cp app/build/outputs/apk/release/app-release.apk "AuraOrbit-${{ steps.version.outputs.VERSION_NAME }}.apk"
 
       - name: Create GitHub Release and upload APK
         uses: softprops/action-gh-release@v2
