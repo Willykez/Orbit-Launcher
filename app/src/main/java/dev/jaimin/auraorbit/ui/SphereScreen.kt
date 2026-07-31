@@ -84,6 +84,10 @@ fun SphereScreen(
         val centerXPx = with(density) { (maxWidth / 2).toPx() }
         val centerYPx = with(density) { (maxHeight / 2).toPx() }
         val ringRadiusPx = with(density) { (maxWidth.value * 0.62f).dp.toPx() }
+        // Deliberately smaller than ringRadiusPx (a flattened ellipse, not a
+        // full circle) — a full circle would push the topmost/bottommost
+        // icons uncomfortably close to the screen edges on tall phones.
+        val verticalRadiusPx = with(density) { (maxHeight.value * 0.16f).dp.toPx() }
 
         val count = apps.size
         val step = 360f / count
@@ -98,18 +102,22 @@ fun SphereScreen(
         for ((index, app) in ordered) {
             val angleDeg = index * step + rotation
             val angleRad = Math.toRadians(angleDeg.toDouble())
-            val depth = cos(angleRad).toFloat() // 1 = front, -1 = back
+            val depth = cos(angleRad).toFloat() // 1 = front (nearest), -1 = back (farthest)
 
-            // Skip icons on the far back half — they'd be tiny, overlapping
+            // Skip icons on the far back — they'd be tiny, overlapping
             // clutter that doesn't add anything visually.
-            if (depth < -0.15f) continue
+            if (depth < -0.55f) continue
 
             val depthFraction = (depth + 1f) / 2f // 0 (back edge) .. 1 (front)
-            val scale = 0.5f + 0.5f * depthFraction
-            val alpha = 0.35f + 0.65f * depthFraction
+            val scale = 0.45f + 0.55f * depthFraction
+            val alpha = 0.3f + 0.7f * depthFraction
 
+            // Both X and Y vary with angle so icons trace an actual ellipse
+            // on screen — front icons low and large, back icons high and
+            // small — rather than a single flat horizontal line, which is
+            // what made the sphere read as a plain strip instead of a ring.
             val xPx = centerXPx + ringRadiusPx * sin(angleRad).toFloat()
-            val yPx = centerYPx
+            val yPx = centerYPx - verticalRadiusPx * depth
 
             AppIcon(
                 app = app,
