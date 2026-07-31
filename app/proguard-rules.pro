@@ -1,12 +1,2 @@
-# libGDX ProGuard rules
--keep class com.badlogic.gdx.** { *; }
--dontwarn com.badlogic.gdx.**
+# Keep app classes (small app, no strong reason to obfuscate aggressively)
 -keep class dev.jaimin.auraorbit.** { *; }
-
-# Keep native method signatures
--keepclasseswithmembers class * {
-    native <methods>;
-}
-
-# Keep Preference classes for settings
--keep class androidx.preference.** { *; }

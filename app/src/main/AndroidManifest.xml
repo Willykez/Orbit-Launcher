@@ -1,38 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     AndroidManifest.xml — AuraOrbit Live Wallpaper
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-     Declares:
-       1. MyWallpaperService    — The live wallpaper service that hosts libGDX.
-       2. LiveWallpaperSettings — Preference Activity for app selection & grouping.
-
-     Package visibility:
-       - Uses a <queries> intent filter (MAIN + LAUNCHER) to enumerate installed
-         apps with launcher icons. No QUERY_ALL_PACKAGES permission is needed
-         (and it is Play-policy restricted anyway).
-
-     Storage:
-       - No READ_EXTERNAL_STORAGE permission. Custom backgrounds are selected via
-         the Android Photo Picker (ACTION_PICK_IMAGES), which grants one-time URI
-         access without needing broad storage permissions.
-     ═══════════════════════════════════════════════════════════════════════════ -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-
-    <uses-permission android:name="android.permission.SET_WALLPAPER" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-
-    <!-- ─── Feature Declarations ─────────────────────────────────────────── -->
-    <!--
-         Declare OpenGL ES 2.0 as required. libGDX requires at minimum GL ES 2.0,
-         and we use it for all 3D rendering (DecalBatch, MeshBuilder, etc.).
-    -->
-    <uses-feature android:glEsVersion="0x00020000" android:required="true" />
-
-    
-
-    <!-- Package-visibility: we only need apps with a launcher activity.
-         This replaces QUERY_ALL_PACKAGES (Play-policy restricted). -->
+    <!-- Needed to enumerate and launch other installed apps (Android 11+
+         package visibility). Without this, PackageManager.queryIntentActivities
+         silently returns an empty/filtered list on API 30+. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -41,69 +12,25 @@
     </queries>
 
     <application
-        android:allowBackup="false"
+        android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:theme="@style/Theme.AuraOrbit"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AuraOrbit">
+        android:exported="true">
 
-        <!-- ═══════════════════════════════════════════════════════════════
-             1. LIVE WALLPAPER SERVICE
-             ═══════════════════════════════════════════════════════════════ -->
-        <service
-            android:name=".MyWallpaperService"
-            android:label="@string/app_name"
-            android:permission="android.permission.BIND_WALLPAPER"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.service.wallpaper.WallpaperService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.service.wallpaper"
-                android:resource="@xml/wallpaper" />
-        </service>
-
-        <!-- Launcher State Accessibility Service -->
-        <service
-            android:name=".LauncherStateService"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
-
-        <!-- ═══════════════════════════════════════════════════════════════
-             2. SPHERE MODE ACTIVITY (launcher entry point)
-
-             The app icon opens this fullscreen sphere activity. The sphere
-             renders with the same SphereEngine as the wallpaper, but the
-             activity owns ALL input — no launcher gesture conflict.
-
-             MAIN + LAUNCHER: app icon opens Sphere Mode (not Settings).
-             LiveWallpaperSettings remains accessible via the gear button in
-             Sphere Mode and via the wallpaper picker's Settings link
-             (wallpaper.xml still points to LiveWallpaperSettings).
-             ═══════════════════════════════════════════════════════════════ -->
         <activity
-            android:name=".SphereModeActivity"
+            android:name=".MainActivity"
             android:label="@string/app_name"
-            android:theme="@style/Theme.AuraOrbit.SphereMode"
+            android:theme="@style/Theme.AuraOrbit"
             android:exported="true"
             android:screenOrientation="portrait"
-            android:taskAffinity=".SphereTask"
-            android:excludeFromRecents="true"
-            android:launchMode="singleInstance"
-            android:configChanges="orientation|screenSize|keyboardHidden">
-            <!-- MAIN + HOME + DEFAULT: lets the user pick AuraOrbit as their
-                 default Home app in Android's "Select Home app" chooser.
-                 A HOME activity must NEVER finish() itself — Android relies
-                 on it always being available to re-show on the Home button.
-                 See SphereModeActivity#isHomeTask() for the runtime check
-                 that adapts back/outside-tap behavior accordingly. -->
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
+            <!-- MAIN + HOME + DEFAULT: offers AuraOrbit in Android's
+                 "Select Home app" chooser. LAUNCHER is also included so the
+                 app has a normal icon too (useful for testing without
+                 setting it as default Home). -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
@@ -111,46 +38,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!-- ═══════════════════════════════════════════════════════════════
-             3. SETTINGS ACTIVITY
-
-             Launched from:
-               - The gear button inside SphereModeActivity (explicit Intent).
-               - The wallpaper picker's "Settings" button (via wallpaper.xml
-                 which still points to LiveWallpaperSettings — unchanged).
-
-             The MAIN/LAUNCHER filter has been MOVED to SphereModeActivity.
-             LiveWallpaperSettings remains exported so the wallpaper picker
-             and explicit intents from SphereModeActivity can still reach it.
-             ═══════════════════════════════════════════════════════════════ -->
-        <activity
-            android:name=".LiveWallpaperSettings"
-            android:label="@string/settings_title"
-            android:theme="@style/Theme.AuraOrbit.Settings"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
-        <activity
-            android:name=".SpherePositionEditorActivity"
-            android:exported="false"
-            android:theme="@style/Theme.AuraOrbit.TransparentFullscreen" />
-
-        <activity
-            android:name=".SphereBlurEditorActivity"
-            android:theme="@style/Theme.AuraOrbit.TransparentFullscreen"
-            android:screenOrientation="portrait"
-            android:exported="false" />
-
-        <activity
-            android:name=".GestureRadiusEditorActivity"
-            android:theme="@style/Theme.AuraOrbit.TransparentFullscreen"
-            android:screenOrientation="portrait"
-            android:exported="false" />
 
     </application>
 

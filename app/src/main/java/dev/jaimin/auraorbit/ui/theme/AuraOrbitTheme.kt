@@ -8,16 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 /**
- * ═══════════════════════════════════════════════════════════════════════════════
- * AuraOrbitTheme.kt — Shared Material3 theme for all Compose screens
- * ═══════════════════════════════════════════════════════════════════════════════
- *
- * The sphere itself is always rendered over a dark/blurred backdrop, so every
- * Compose surface hosted alongside it (App Drawer, and future screens) uses a
- * dark color scheme regardless of system theme. On Android 12+ we pick up the
- * user's wallpaper-derived dynamic color for accents, matching
- * `values-v31/colors_widget.xml`'s existing dynamic-color approach for the
- * widget.
+ * Always dark, regardless of system theme — a launcher's home screen and
+ * drawer read better against a dark background at any time of day. On
+ * Android 12+, accent colors are still derived from the user's wallpaper via
+ * dynamic color.
  */
 @Composable
 fun AuraOrbitTheme(content: @Composable () -> Unit) {
